@@ -23,6 +23,15 @@ input double lotLimit=0.15;                             //Maximum lot size for t
 double our_buffer[];
 int ticket;
 
+double   open1,//first candle Open price
+open2,    //second candle Open price
+close1,   //first candle Close price
+close2,   //second candle Close price
+low1,     //first candle Low price
+low2,     //second candle Low price
+high1,    //first candle High price
+high2;    //second candle High price
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -51,9 +60,14 @@ void OnTick()
          return;
       }
       
-      bool buyCondition = (closePrice > filterMa) && (signalLine < macdLine) && (signalLinePrevious >= macdLinePrevious) && (signalLine < 0 && macdLine < 0);
+      double rmiValue = iCustom(_Symbol,_Period,"RMI",rmiPeriod,5,0,1);
       
-      bool sellCondition = (closePrice < filterMa) && (signalLine > macdLine) && (signalLinePrevious <= macdLinePrevious) && (signalLine > 0 && macdLine > 0);
+      
+      double closePrice = NormalizeDouble(iClose(Symbol(), Period(), 1), Digits);
+      
+      bool buyCondition = rmiValue < rmiBuyLevel && is_bullish_inside_bar();
+      
+      bool sellCondition = rmiValue > rmiSellLevel && is_bearish_inside_bar();
       
 
       if(!trades_on_symbol(_Symbol))
@@ -67,7 +81,7 @@ void OnTick()
                Print("Closed all orders? :" + closedAllOrders);
                Print("buy asking price: " + Ask);
                
-               ticket=OrderSend(Symbol(),OP_BUY,lotSize,Ask,3,Ask-(ATRPoints*InpSLfactor),Ask+(ATRPoints*InpTPfactor),"macd sample",16384,0,Green);
+               ticket=OrderSend(Symbol(),OP_BUY,lotSize,Ask,3,Ask-slPips*10*Point,Ask+tpPips*10*Point,"setupHunter",16384,0,Blue);
                if(ticket>0)
                  {
                   if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -87,7 +101,7 @@ void OnTick()
                Print("Closed all orders? :" + closedAllOrders);
                Print("sell sking price: " + Bid);
                
-               ticket=OrderSend(Symbol(),OP_SELL,lotSize,Bid,3,Ask+(ATRPoints*InpSLfactor),Ask-(ATRPoints*InpTPfactor),"macd sample",16384,0,Red);
+               ticket=OrderSend(Symbol(),OP_SELL,lotSize,Bid,3,Bid+slPips*10*Point,Bid-tpPips*10*Point,"setupHunter",16384,0,Red);
                if(ticket>0)
                  {
                   if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -101,7 +115,9 @@ void OnTick()
       }
   }
   
-
+//+------------------------------------------------------------------+
+//| Check for new bar                                                |
+//+------------------------------------------------------------------+
 bool is_new_bar()
 {
    static datetime lastbar;
@@ -115,7 +131,9 @@ bool is_new_bar()
 }
   
   
-  
+//+------------------------------------------------------------------+
+//| Check if there are any open trades on the symbol                 |
+//+------------------------------------------------------------------+  
 bool trades_on_symbol(string symbol)
 {
    for(int i=OrdersTotal()-1;OrderSelect(i,SELECT_BY_POS);i--)
@@ -124,6 +142,9 @@ bool trades_on_symbol(string symbol)
    return false;
 }
 
+//+------------------------------------------------------------------+
+//| Check if there are any open sell trades on the symbol            |
+//+------------------------------------------------------------------+  
 bool sell_trades_on_symbol(string symbol)
 {
    for(int i=OrdersTotal()-1;OrderSelect(i,SELECT_BY_POS);i--)
@@ -132,6 +153,9 @@ bool sell_trades_on_symbol(string symbol)
    return false;
 }
 
+//+------------------------------------------------------------------+
+//| Check if there are any open buy trades on the symbol             |
+//+------------------------------------------------------------------+  
 bool buy_trades_on_symbol(string symbol)
 {
    for(int i=OrdersTotal()-1;OrderSelect(i,SELECT_BY_POS);i--)
@@ -139,7 +163,11 @@ bool buy_trades_on_symbol(string symbol)
          return true;
    return false;
 }
-  
+ 
+
+//+------------------------------------------------------------------+
+//| Close all trades                                                 |
+//+------------------------------------------------------------------+    
 bool close_all()
 {
    bool result = true;
@@ -156,4 +184,116 @@ bool close_all()
       }
    }
    return result;
+}
+
+//+------------------------------------------------------------------+
+//| Check for bearish engulfing pattern                              |
+//+------------------------------------------------------------------+
+bool is_bearish_engulfing()
+{
+   open1 = NormalizeDouble(iOpen(Symbol(), Period(), 1), Digits);
+   open2 = NormalizeDouble(iOpen(Symbol(), Period(), 2), Digits);
+   close1 = NormalizeDouble(iClose(Symbol(), Period(), 1), Digits);
+   close2 = NormalizeDouble(iClose(Symbol(), Period(), 2), Digits);
+   low1 = NormalizeDouble(iLow(Symbol(), Period(), 1), Digits);
+   low2 = NormalizeDouble(iLow(Symbol(), Period(), 2), Digits);
+   high1 = NormalizeDouble(iHigh(Symbol(), Period(), 1), Digits);
+   high2 = NormalizeDouble(iHigh(Symbol(), Period(), 2), Digits);
+
+   if(
+      low1 < low2 &&// First bar's Low is below second bar's Low
+      high1 > high2 &&// First bar's High is above second bar's High
+      close1 < open2 &&	//First bar's Close price is below second bar's Open
+      open1 > close1 && //First bar is a bearish bar
+      open2 < close2 //Second bar is a bullish bar
+   )	
+   {
+      return true;
+   }
+     
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Check for bullish engulfing pattern                              |
+//+------------------------------------------------------------------+
+bool is_bullish_engulfing()
+{
+   open1 = NormalizeDouble(iOpen(Symbol(), Period(), 1), Digits);
+   open2 = NormalizeDouble(iOpen(Symbol(), Period(), 2), Digits);
+   close1 = NormalizeDouble(iClose(Symbol(), Period(), 1), Digits);
+   close2 = NormalizeDouble(iClose(Symbol(), Period(), 2), Digits);
+   low1 = NormalizeDouble(iLow(Symbol(), Period(), 1), Digits);
+   low2 = NormalizeDouble(iLow(Symbol(), Period(), 2), Digits);
+   high1 = NormalizeDouble(iHigh(Symbol(), Period(), 1), Digits);
+   high2 = NormalizeDouble(iHigh(Symbol(), Period(), 2), Digits);
+
+   if(
+      low1 < low2 &&// First bar's Low is below second bar's Low 
+      high1 > high2 &&// First bar's High is above second bar's High
+      close1 > open2 && //First bar's Close price is higher than second bar's Open
+      open1 < close1 && //First bar is a bullish bar
+      open2 > close2 //Second bar is a bearish bar
+   )   
+   {   
+      return true;
+   }
+     
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Check for bearish inside bar pattern                             |
+//+------------------------------------------------------------------+
+bool is_bearish_inside_bar()
+{
+   open1        = NormalizeDouble(iOpen(Symbol(), Period(), 1), Digits);
+   open2        = NormalizeDouble(iOpen(Symbol(), Period(), 2), Digits);
+   close1       = NormalizeDouble(iClose(Symbol(), Period(), 1), Digits);
+   close2       = NormalizeDouble(iClose(Symbol(), Period(), 2), Digits);
+   low1         = NormalizeDouble(iLow(Symbol(), Period(), 1), Digits);
+   low2         = NormalizeDouble(iLow(Symbol(), Period(), 2), Digits);
+   high1        = NormalizeDouble(iHigh(Symbol(), Period(), 1), Digits);
+   high2        = NormalizeDouble(iHigh(Symbol(), Period(), 2), Digits);
+
+   if(
+      open2 < close2 && //the second bar is bullish
+      close1 < open1 && //the first bar is bearish
+      high2 > high1 &&  //the bar 2 High exceeds the first one's High
+      open2 < close1 && //the second bar's Open exceeds the first bar's Close
+      low2 < low1 //the second bar's Low is lower than the first bar's Low
+   )      
+   {
+      return true;
+   }
+   
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Check for bullish inside bar pattern                             |
+//+------------------------------------------------------------------+
+bool is_bullish_inside_bar()
+{
+   open1        = NormalizeDouble(iOpen(Symbol(), Period(), 1), Digits);
+   open2        = NormalizeDouble(iOpen(Symbol(), Period(), 2), Digits);
+   close1       = NormalizeDouble(iClose(Symbol(), Period(), 1), Digits);
+   close2       = NormalizeDouble(iClose(Symbol(), Period(), 2), Digits);
+   low1         = NormalizeDouble(iLow(Symbol(), Period(), 1), Digits);
+   low2         = NormalizeDouble(iLow(Symbol(), Period(), 2), Digits);
+   high1        = NormalizeDouble(iHigh(Symbol(), Period(), 1), Digits);
+   high2        = NormalizeDouble(iHigh(Symbol(), Period(), 2), Digits);
+
+   if(
+      open2 > close2 && //the second bar is bearish
+      close1 > open1 && //the first bar is bullish
+      high2 > high1 &&  //the bar 2 High exceeds the first one's High
+      open2 > close1 && //the second bar's Open exceeds the first one's Close
+      low2 < low1)      //the second bar's Low is lower than the first one's Low
+         
+   {
+      return true;
+   }
+   
+   return false;
 }
