@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                  setupHunter.mq4 |
+//|                                                  nexusEA.mq4 |
 //|                                                    Matej Ocovsky |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -81,7 +81,7 @@ void OnTick()
                Print("Closed all orders? :" + closedAllOrders);
                Print("buy asking price: " + Ask);
                
-               ticket=OrderSend(Symbol(),OP_BUY,lotSize,Ask,3,Ask-slPips*10*Point,Ask+tpPips*10*Point,"setupHunter",16384,0,Blue);
+               ticket=OrderSend(Symbol(),OP_BUY,lotSize,Ask,3,Ask-slPips*10*Point,Ask+tpPips*10*Point,"nexusEA",16384,0,Blue);
                if(ticket>0)
                  {
                   if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -101,7 +101,7 @@ void OnTick()
                Print("Closed all orders? :" + closedAllOrders);
                Print("sell sking price: " + Bid);
                
-               ticket=OrderSend(Symbol(),OP_SELL,lotSize,Bid,3,Bid+slPips*10*Point,Bid-tpPips*10*Point,"setupHunter",16384,0,Red);
+               ticket=OrderSend(Symbol(),OP_SELL,lotSize,Bid,3,Bid+slPips*10*Point,Bid-tpPips*10*Point,"nexusEA",16384,0,Red);
                if(ticket>0)
                  {
                   if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
