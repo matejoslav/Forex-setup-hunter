@@ -1,6 +1,6 @@
 # Nexus_EA
 
-# How it works
+## How it works
 This ea is using a combination of candlestick patterns and indicators.
 
 Indicators used: 
